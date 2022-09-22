@@ -1,0 +1,5 @@
+PING_PATH=/usr/bin/ping
+HOSTS= 192.168.0.1, 192.168.0.100, google.com
+INTERVAL=2m
+TIMEOUT=15
+PING_COUNT=5

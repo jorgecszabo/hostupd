@@ -1,4 +1,5 @@
 #include "ping.h"
+#include <tuple>
 
 Ping::Ping(std::string host, std::string flags, std::string absPath): _host(host), _flags(flags), _path(absPath) {
     string command(_path + " " + _flags + " " + _host);
@@ -14,22 +15,26 @@ Ping::Ping(std::string host, std::string flags, std::string absPath): _host(host
     }
     _exitCode = pclose(pipe);
 
-    string rtt = getRtt();
+    if (_exitCode == 0) {
+        string rtt = getRtt();
 
-    size_t pos = 0;
-    std::string token;
-    int i = 0;
-    float arr[4];
-    while ((pos = rtt.find('/')) != std::string::npos) {
-        token = rtt.substr(0, pos);
-        arr[i] = stof(token);
-        i++;
-        rtt.erase(0, pos + 1);
+        size_t pos = 0;
+        std::string token;
+        int i = 0;
+        float arr[4];
+        while ((pos = rtt.find('/')) != std::string::npos) {
+            token = rtt.substr(0, pos);
+            arr[i] = stof(token);
+            i++;
+            rtt.erase(0, pos + 1);
+        }
+        _min = arr[0];
+        _avg = arr[1];
+        _max = arr[2];
+        _mdev = arr[3];
     }
-    _min = arr[0];
-    _avg = arr[1];
-    _max = arr[2];
-    _mdev = arr[3];
+    _time = getTime();
+    _packetLoss = getPacketLoss();
 }
 
 int Ping::exitCode() {
@@ -56,6 +61,14 @@ float Ping::avg() {
     return _avg;
 }
 
+float Ping::packetLoss() {
+    return _packetLoss;
+}
+
+int Ping::time() {
+    return _time;
+}
+
 string Ping::getRtt() {
     if (_exitCode != 0)
         return "";
@@ -68,4 +81,35 @@ string Ping::getRtt() {
     size_t end = _stdout.find(endPattern);
 
     return _stdout.substr(start + sizeof(startPattern) - 1, end - start - sizeof(startPattern) + 1);
+}
+
+float Ping::getPacketLoss() {
+    if (_exitCode == 2)
+        return 0.0;
+
+    int i = 0;
+    const char startPattern[] = "received, ";
+    const char endPattern[] = "% packet loss, time ";
+
+    size_t start = _stdout.find(startPattern);
+    size_t end = _stdout.find(endPattern);
+
+    float loss = stof(_stdout.substr(start + sizeof(startPattern) - 1, end - start - sizeof(startPattern) + 1));
+
+    return loss;
+}
+
+int Ping::getTime() {
+    if (_exitCode == 2)
+        return 0.0;
+
+    const char startPattern[] = " packet loss, time ";
+    const char endPattern[] = "ms";
+
+    size_t start = _stdout.find(startPattern);
+    size_t end = _stdout.find(endPattern);
+
+    int time = stoi(_stdout.substr(start + sizeof(startPattern) - 1, end - start - sizeof(startPattern) + 1));
+
+    return time;
 }
