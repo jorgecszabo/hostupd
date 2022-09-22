@@ -1,5 +1,6 @@
 #include "ping.h"
 #include <tuple>
+#include "assert.h"
 
 Ping::Ping(std::string host, std::string flags, std::string absPath): _host(host), _flags(flags), _path(absPath) {
     string command(_path + " " + _flags + " " + _host);
@@ -33,8 +34,10 @@ Ping::Ping(std::string host, std::string flags, std::string absPath): _host(host
         _max = arr[2];
         _mdev = arr[3];
     }
-    _time = getTime();
-    _packetLoss = getPacketLoss();
+    if (_exitCode == 0 || _exitCode == 256) {
+        _time = getTime();
+        _packetLoss = getPacketLoss();
+    }
 }
 
 int Ping::exitCode() {
